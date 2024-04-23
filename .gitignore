@@ -1,4 +1,4 @@
 models/
 vit_models/
 datasets/
-**/__pycache__
+__pycache__/*
