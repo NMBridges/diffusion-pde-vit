@@ -44,24 +44,24 @@ class UNetDoubleConv(nn.Module):
                 nn.Conv2d(in_channels, out_channels, kernel_size=conv_map['kernel'], stride=conv_map['stride'], padding=conv_map['padding'], groups=1, bias=False, dilation=conv_map['dilation']) if conv_type == ConvType.Conv2d else\
                 nn.Conv3d(in_channels, out_channels, kernel_size=conv_map['kernel'], stride=conv_map['stride'], padding=conv_map['padding'], groups=1, bias=False, dilation=conv_map['dilation'])
             ),
-            nn.Dropout(0.2),
             nn.LeakyReLU(0.2),
             (
                 nn.BatchNorm2d(out_channels) if conv_type == ConvType.Conv2d else\
                 nn.BatchNorm3d(out_channels)
-            )
+            ),
+            nn.Dropout(0.2)
         )
         self.conv2 = nn.Sequential(
             (
                 nn.Conv2d(out_channels, out_channels, kernel_size=conv_map['kernel'], stride=conv_map['stride'], padding=conv_map['padding'], groups=1, bias=False, dilation=conv_map['dilation']) if conv_type == ConvType.Conv2d else\
                 nn.Conv3d(out_channels, out_channels, kernel_size=conv_map['kernel'], stride=conv_map['stride'], padding=conv_map['padding'], groups=1, bias=False, dilation=conv_map['dilation'])
             ),
-            nn.Dropout(0.2),
             nn.LeakyReLU(0.2),
             (
                 nn.BatchNorm2d(out_channels) if conv_type == ConvType.Conv2d else\
                 nn.BatchNorm3d(out_channels)
-            )
+            ),
+            nn.Dropout(0.2)
         )
         self.time_map = nn.Sequential(
             nn.Linear(time_dimension, out_channels, bias=False),
