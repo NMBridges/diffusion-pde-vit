@@ -1,5 +1,5 @@
 from torch import (Tensor, randn_like, sqrt, prod, sin, cos,
-                    outer, int16)
+                    outer, lerp)
 import torch.nn as nn
 import numpy as np
 from src.diff_utils import device, ConvType
@@ -61,9 +61,12 @@ class VDM_Decoder(nn.Module):
         # sine embedding
         return sin(outer(t, self.embedded_frequencies)) * self.sin_hot + cos(outer(t, self.embedded_frequencies)) * self.cos_hot
 
-    def sample(self, x_t, t, y):
+    def sample(self, x_t, t, y, cfg_coeff=3):
         # x_{t-1} sampled along p(x_{t-1} | x_t)
         predicted_noise = self.forward(x_t, t, y)
+        if cfg_coeff > 0:
+            unconditional_predicted_noise = self.forward(x_t, t, None)
+            predicted_noise = lerp(unconditional_predicted_noise, predicted_noise, cfg_coeff)
 
         # DDPM
         if self.conv_type == ConvType.Conv2d:
@@ -84,7 +87,9 @@ class VDM_Decoder(nn.Module):
 
     def forward(self, x_t, t, y):
         time = self.time_embedding(t)
-        if self.num_classes is None:
+        if y is None:
+            cond_emb = None
+        elif self.num_classes is None:
             cond_emb = self.cond_embedding(y)
         else:
             cond_emb = self.cond_embedding(y.flatten().long())

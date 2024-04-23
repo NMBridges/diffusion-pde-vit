@@ -24,9 +24,11 @@ class CrossAttentionBlock(nn.Module):
         # K.swapaxes (batch, proj_dim, num_cond)
         # Q @ K.swapaxes (batch, r*c, num_cond)
         # Q @ K.swapaxes * V (batch, r*c, proj_dim) --> out_proj, moveaxis, reshape --> (batch, channels, r, c)
+        if y is None:
+            return x
         Q = self.Wq(x.moveaxis(-3, -1).flatten(-3, -2))
-        KT = self.Wk(y).swapaxes(-2, -1)
-        V = self.Wv(y)
+        KT = self.Wk(y.unsqueeze(1)).swapaxes(-2, -1)
+        V = self.Wv(y.unsqueeze(1))
         attn = self.out_proj(self.softmax(Q @ KT * self.scale) @ V).moveaxis(-1, -2).unflatten(-1, (x.shape[-2:]))
         return x + attn
 
@@ -83,10 +85,10 @@ class UNetDoubleConv(nn.Module):
     def forward(self, x, time_embedding, y):
         if self.conv_type == ConvType.Conv2d:
             # dc_new = self.conv2(self.conv1(x) + self.cond_map(y)[:,:,None,None] + self.time_map(time_embedding)[:,:,None,None])
-            dc_new = self.conv2(self.cond_map(self.conv1(x), y.unsqueeze(1)) + self.time_map(time_embedding)[:,:,None,None])
+            dc_new = self.conv2(self.cond_map(self.conv1(x), y) + self.time_map(time_embedding)[:,:,None,None])
         else:
             # dc_new = self.conv2(self.conv1(x) + self.cond_map(y)[:,:,None,None,None] + self.time_map(time_embedding)[:,:,None,None,None])
-            dc_new = self.conv2(self.cond_map(self.conv1(x), y.unsqueeze(1)) + self.time_map(time_embedding)[:,:,None,None,None])
+            dc_new = self.conv2(self.cond_map(self.conv1(x), y) + self.time_map(time_embedding)[:,:,None,None,None])
         return self.batch_norm(self.act(dc_new + self.res_conv(x)))
 
 
