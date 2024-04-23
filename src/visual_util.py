@@ -31,7 +31,7 @@ def show_img_from_tensor(x_T, scale=True):
 
 
 def pick_random_label(data_type : DataType):
-    if data_type == DataType.mnist:
+    if data_type == DataType.mnist or data_type == DataType.images:
         return Tensor([[np.random.randint(10)]]).to(device)
     elif data_type == DataType.heat_1d:
         return Tensor([[np.random.random() * 2]]).to(device)

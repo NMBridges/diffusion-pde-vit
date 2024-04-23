@@ -60,6 +60,13 @@ conv_map = { # for running convolutions, what should the dimensions be
             'dilation': (1,1),
             'down_up_kernel_and_stride': (2,2)
         },
+        DataType.images: {
+            'kernel': (3,3),
+            'stride': (1,1),
+            'padding': (1,1),
+            'dilation': (1,1),
+            'down_up_kernel_and_stride': (2,2)
+        },
         DataType.heat_1d: {
             'kernel': (1,3),
             'stride': (1,1),
@@ -83,6 +90,13 @@ conv_map = { # for running convolutions, what should the dimensions be
             'dilation': (1,1,1),
             'down_up_kernel_and_stride': (1,2,2)
         },
+        DataType.images: {
+            'kernel': (3,3,3),
+            'stride': (1,1,1),
+            'padding': (1,1,1),
+            'dilation': (1,1,1),
+            'down_up_kernel_and_stride': (2,2,2)
+        },
         DataType.heat_1d: {
             'kernel': (3,1,3),
             'stride': (1,1,1),
@@ -99,6 +113,15 @@ conv_map = { # for running convolutions, what should the dimensions be
         }
     }
 }
+
+
+label_dim_map = {
+    DataType.mnist: 1,
+    DataType.images: 1,
+    DataType.heat_1d: 3,
+    DataType.heat_2d: 3
+}
+
 
 T_max = 3.0
 Y_max = 1.0

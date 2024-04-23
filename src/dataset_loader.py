@@ -1,7 +1,7 @@
 from torch import Tensor, load
 from src.diff_utils import DataType, ConvType, device
 import numpy as np
-from keras.datasets import mnist
+from keras.datasets import mnist, cifar10
 from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
 
@@ -40,17 +40,36 @@ def load_dataset(args : dict):
         dataset_dict['test_dataloader'] = test_dataloader
 
     elif data_type == DataType.images:
-        dataset = load('patches.pkl')
-        x_train = dataset[:(len(dataset) * 4) // 5] * 2 - 1.0
-        x_test = dataset[(len(dataset) * 4) // 5:] * 2 - 1.0
+        # dataset = load('patches.pkl')
+        # x_train = dataset[:(len(dataset) * 4) // 5] * 2 - 1.0
+        # x_test = dataset[(len(dataset) * 4) // 5:] * 2 - 1.0
+
+        # if conv_type == ConvType.Conv3d:
+        #     x_train = x_train[None,:,:,:]
+        #     x_test = x_test[None,:,:,:]
+
+        # train_dataset = TensorDataset(Tensor(x_train).to(device))
+        # train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        # test_dataset = TensorDataset(Tensor(x_test).to(device))
+        # test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+        # dataset_dict['train_dataset'] = train_dataset
+        # dataset_dict['train_dataloader'] = train_dataloader
+        # dataset_dict['test_dataset'] = test_dataset
+        # dataset_dict['test_dataloader'] = test_dataloader
+        (x_train, y_train), (x_test, y_test) = cifar10.load_data() # 32x32x3
+        x_train = x_train.swapaxes(1,3)
+        x_test = x_test.swapaxes(1,3)
+        x_train = x_train / 127.5 - 1.0
+        x_test = x_test / 127.5 - 1.0
 
         if conv_type == ConvType.Conv3d:
-            x_train = x_train[None,:,:,:]
-            x_test = x_test[None,:,:,:]
+            x_train = x_train[:,None,None,:,:]
+            x_test = x_test[:,None,None,:,:]
 
-        train_dataset = TensorDataset(Tensor(x_train).to(device))
+        train_dataset = TensorDataset(Tensor(x_train).to(device), Tensor(y_train).to(device))
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        test_dataset = TensorDataset(Tensor(x_test).to(device))
+        test_dataset = TensorDataset(Tensor(x_test).to(device), Tensor(y_test).to(device))
         test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
         dataset_dict['train_dataset'] = train_dataset
