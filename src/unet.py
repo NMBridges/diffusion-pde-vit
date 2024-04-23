@@ -27,8 +27,8 @@ class CrossAttentionBlock(nn.Module):
         if y is None:
             return x
         Q = self.Wq(x.moveaxis(-3, -1).flatten(-3, -2))
-        KT = self.Wk(y.unsqueeze(1)).swapaxes(-2, -1)
-        V = self.Wv(y.unsqueeze(1))
+        KT = self.Wk(y).swapaxes(-2, -1)
+        V = self.Wv(y)
         attn = self.out_proj(self.softmax(Q @ KT * self.scale) @ V).moveaxis(-1, -2).unflatten(-1, (x.shape[-2:]))
         return x + attn
 
@@ -129,8 +129,7 @@ class UNetUpBlock(nn.Module):
         )
 
     def forward(self, x, x_prior, time_embedding, y):
-        attn_x_prior = self.batch_norm(x_prior * self.sigmoid(self.attention_conv(x_prior)))
-        return self.double_conv(cat((attn_x_prior, self.unpool(x)), dim=1), time_embedding, y)
+        return self.double_conv(cat((x_prior, self.unpool(x)), dim=1), time_embedding, y)
 
 
 class UNet(nn.Module):

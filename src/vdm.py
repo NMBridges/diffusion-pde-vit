@@ -66,7 +66,7 @@ class VDM_Decoder(nn.Module):
         predicted_noise = self.forward(x_t, t, y)
         if cfg_coeff > 0:
             unconditional_predicted_noise = self.forward(x_t, t, None)
-            predicted_noise = lerp(unconditional_predicted_noise, predicted_noise, cfg_coeff)
+            predicted_noise = lerp(predicted_noise, unconditional_predicted_noise, -cfg_coeff)
 
         # DDPM
         if self.conv_type == ConvType.Conv2d:
@@ -92,7 +92,7 @@ class VDM_Decoder(nn.Module):
         elif self.num_classes is None:
             cond_emb = self.cond_embedding(y)
         else:
-            cond_emb = self.cond_embedding(y.flatten().long())
+            cond_emb = self.cond_embedding(y.long())
         predicted_noise = self.noise_pred(x_t, time, cond_emb)
 
         return predicted_noise
