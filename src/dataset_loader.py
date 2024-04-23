@@ -20,8 +20,8 @@ def load_dataset(args : dict):
 
     if data_type == DataType.mnist:
         (x_train, y_train), (x_test, y_test) = mnist.load_data()
-        x_train = np.pad(x_train, pad_width=2)[2:-2] # So images are 32x32 and UNet can do more invertible max poolings
-        x_test = np.pad(x_test, pad_width=2)[2:-2]
+        x_train = np.pad(x_train, pad_width=2)[2:-2,None] # So images are 32x32 and UNet can do more invertible max poolings
+        x_test = np.pad(x_test, pad_width=2)[2:-2,None]
         x_train = x_train / 127.5 - 1.0
         x_test = x_test / 127.5 - 1.0
 
@@ -58,8 +58,8 @@ def load_dataset(args : dict):
         # dataset_dict['test_dataset'] = test_dataset
         # dataset_dict['test_dataloader'] = test_dataloader
         (x_train, y_train), (x_test, y_test) = cifar10.load_data() # 32x32x3
-        x_train = x_train.swapaxes(1,3)
-        x_test = x_test.swapaxes(1,3)
+        x_train = x_train.swapaxes(1,3).swapaxes(2,3)
+        x_test = x_test.swapaxes(1,3).swapaxes(2,3)
         x_train = x_train / 127.5 - 1.0
         x_test = x_test / 127.5 - 1.0
 

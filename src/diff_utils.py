@@ -123,6 +123,35 @@ label_dim_map = {
 }
 
 
+num_classes_map = {
+    DataType.mnist: 10, # discrete labels
+    DataType.images: 10,
+    DataType.heat_1d: None, # continuous labels
+    DataType.heat_2d: None
+}
+
+
+cifar_label_map = {
+    0: 'airplane',
+    1: 'automobile',
+    2: 'bird',
+    3: 'cat',
+    4: 'deer',
+    5: 'dog',
+    6: 'frog',
+    7: 'horse',
+    8: 'ship',
+    9: 'truck',
+}
+
+
+def get_label_name(data_type, label):
+    if data_type == DataType.images:
+        return cifar_label_map[int(label.item())]
+    else:
+        return label
+
+
 T_max = 3.0
 Y_max = 1.0
 X_max = 1.0

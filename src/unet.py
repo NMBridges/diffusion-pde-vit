@@ -1,6 +1,34 @@
-from torch import cat
+from torch import cat, matmul
 import torch.nn as nn
+import numpy as np
 from src.diff_utils import ConvType
+
+
+class CrossAttentionBlock(nn.Module):
+    def __init__(self, channels, cond_dimension, proj_dimension):
+        super(CrossAttentionBlock, self).__init__()
+
+        self.Wq = nn.Linear(channels, proj_dimension, bias=False)
+        self.Wk = nn.Linear(cond_dimension, proj_dimension, bias=False)
+        self.Wv = nn.Linear(cond_dimension, proj_dimension, bias=False)
+        self.out_proj = nn.Linear(proj_dimension, channels, bias=False)
+        self.scale = 1 / np.sqrt(channels)
+        self.softmax = nn.Softmax(dim=-2)
+
+    def forward(self, x, y):
+        ''' x: Tensor of shape (batch_size, num_channels, num_rows, num_cols)
+            y: Tensor of shape (batch_size, num_conditions, condition_dimension)
+        '''
+        # x (batch, channels, r, c) --> moveaxis, flatten, Wq --> Q (batch, r*c, proj_dim)
+        # cond (batch, num_cond, cond_dim) --> Wk/Wv --> K/V (batch, num_cond, proj_dim)
+        # K.swapaxes (batch, proj_dim, num_cond)
+        # Q @ K.swapaxes (batch, r*c, num_cond)
+        # Q @ K.swapaxes * V (batch, r*c, proj_dim) --> out_proj, moveaxis, reshape --> (batch, channels, r, c)
+        Q = self.Wq(x.moveaxis(-3, -1).flatten(-3, -2))
+        KT = self.Wk(y).swapaxes(-2, -1)
+        V = self.Wv(y)
+        attn = self.out_proj(self.softmax(Q @ KT * self.scale) @ V).moveaxis(-1, -2).unflatten(-1, (x.shape[-2:]))
+        return x + attn
 
 
 class UNetDoubleConv(nn.Module):
@@ -14,6 +42,7 @@ class UNetDoubleConv(nn.Module):
                 nn.Conv2d(in_channels, out_channels, kernel_size=conv_map['kernel'], stride=conv_map['stride'], padding=conv_map['padding'], groups=1, bias=False, dilation=conv_map['dilation']) if conv_type == ConvType.Conv2d else\
                 nn.Conv3d(in_channels, out_channels, kernel_size=conv_map['kernel'], stride=conv_map['stride'], padding=conv_map['padding'], groups=1, bias=False, dilation=conv_map['dilation'])
             ),
+            nn.Dropout(0.2),
             nn.LeakyReLU(0.2),
             (
                 nn.BatchNorm2d(out_channels) if conv_type == ConvType.Conv2d else\
@@ -25,6 +54,7 @@ class UNetDoubleConv(nn.Module):
                 nn.Conv2d(out_channels, out_channels, kernel_size=conv_map['kernel'], stride=conv_map['stride'], padding=conv_map['padding'], groups=1, bias=False, dilation=conv_map['dilation']) if conv_type == ConvType.Conv2d else\
                 nn.Conv3d(out_channels, out_channels, kernel_size=conv_map['kernel'], stride=conv_map['stride'], padding=conv_map['padding'], groups=1, bias=False, dilation=conv_map['dilation'])
             ),
+            nn.Dropout(0.2),
             nn.LeakyReLU(0.2),
             (
                 nn.BatchNorm2d(out_channels) if conv_type == ConvType.Conv2d else\
@@ -35,10 +65,11 @@ class UNetDoubleConv(nn.Module):
             nn.Linear(time_dimension, out_channels, bias=False),
             nn.LeakyReLU(0.2)
         )
-        self.cond_map = nn.Sequential(
-            nn.Linear(cond_dimension, out_channels, bias=False),
-            nn.LeakyReLU(0.2)
-        )
+        # self.cond_map = nn.Sequential(
+        #     nn.Linear(cond_dimension, out_channels, bias=False),
+        #     nn.LeakyReLU(0.2)
+        # )
+        self.cond_map = CrossAttentionBlock(out_channels, cond_dimension, 6)
         self.res_conv = (
             nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, groups=1, bias=False) if conv_type == ConvType.Conv2d else\
             nn.Conv3d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, groups=1, bias=False)
@@ -51,9 +82,11 @@ class UNetDoubleConv(nn.Module):
 
     def forward(self, x, time_embedding, y):
         if self.conv_type == ConvType.Conv2d:
-            dc_new = self.conv2(self.conv1(x) + self.cond_map(y)[:,:,None,None] + self.time_map(time_embedding)[:,:,None,None])
+            # dc_new = self.conv2(self.conv1(x) + self.cond_map(y)[:,:,None,None] + self.time_map(time_embedding)[:,:,None,None])
+            dc_new = self.conv2(self.cond_map(self.conv1(x), y.unsqueeze(1)) + self.time_map(time_embedding)[:,:,None,None])
         else:
-            dc_new = self.conv2(self.conv1(x) + self.cond_map(y)[:,:,None,None,None] + self.time_map(time_embedding)[:,:,None,None,None])
+            # dc_new = self.conv2(self.conv1(x) + self.cond_map(y)[:,:,None,None,None] + self.time_map(time_embedding)[:,:,None,None,None])
+            dc_new = self.conv2(self.cond_map(self.conv1(x), y.unsqueeze(1)) + self.time_map(time_embedding)[:,:,None,None,None])
         return self.batch_norm(self.act(dc_new + self.res_conv(x)))
 
 

@@ -1,5 +1,5 @@
 from torch import (Tensor, randn_like, sqrt, prod, sin, cos,
-                    outer)
+                    outer, int16)
 import torch.nn as nn
 import numpy as np
 from src.diff_utils import device, ConvType
@@ -31,7 +31,7 @@ class VDM_Encoder(nn.Module):
 
 
 class VDM_Decoder(nn.Module):
-    def __init__(self, depth, num_channels=1, label_dim=1, conv_map=None, conv_type=ConvType.Conv2d):
+    def __init__(self, depth, num_channels=1, label_dim=1, num_classes=None, conv_map=None, conv_type=ConvType.Conv2d):
         super(VDM_Decoder, self).__init__()
 
         self.conv_type = conv_type
@@ -44,12 +44,16 @@ class VDM_Decoder(nn.Module):
         self.cos_hot = Tensor(np.linspace(1, d, d) % 2 == 1).to(device)
 
         c = 10 # Dimension of condition embedding
-        self.cond_embedding = nn.Sequential(
-            nn.Linear(label_dim, c),
-            nn.LeakyReLU(0.2),
-            nn.Linear(c, c),
-            nn.LeakyReLU(0.2)
-        )
+        self.num_classes = num_classes
+        if num_classes is None:
+            self.cond_embedding = nn.Sequential(
+                nn.Linear(label_dim, c),
+                nn.LeakyReLU(0.2),
+                nn.Linear(c, c),
+                nn.LeakyReLU(0.2)
+            )
+        else:
+            self.cond_embedding = nn.Embedding(num_classes, c)
 
         self.noise_pred = UNet(num_channels, d, c, conv_map, conv_type).to(device)
 
@@ -80,7 +84,10 @@ class VDM_Decoder(nn.Module):
 
     def forward(self, x_t, t, y):
         time = self.time_embedding(t)
-        cond_emb = self.cond_embedding(y)
+        if self.num_classes is None:
+            cond_emb = self.cond_embedding(y)
+        else:
+            cond_emb = self.cond_embedding(y.flatten().long())
         predicted_noise = self.noise_pred(x_t, time, cond_emb)
 
         return predicted_noise

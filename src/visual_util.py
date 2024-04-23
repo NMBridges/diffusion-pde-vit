@@ -9,11 +9,13 @@ import matplotlib.animation as animation
 def sampling_traj(d, x_T, T, times, y, num_samples):
     i = T
     x_Ts = [x_T]
+    d.eval()
     while i >= 1:
         x_T = d.sample(x_T, times[i:i+1], y)
         i -= 1
         if i % (T // (num_samples - 1)) == 0:
             x_Ts.append(x_T)
+    d.train()
     return x_Ts, y
 
 
@@ -42,9 +44,11 @@ def pick_random_label(data_type : DataType):
 @no_grad()
 def denoise(d, x_T, T, times, y):
     i = T
+    d.eval()
     while i >= 1:
         x_T = d.sample(x_T, times[i:i+1], y)
         i -= 1
+    d.train()
     return x_T
 
 def show_img(x_T, scale=True):
